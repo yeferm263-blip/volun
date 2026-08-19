@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import { api, formatMinutes } from '../../services/api';
 import { HourSubmission } from '../../types';
 import { StatusBadge } from '../../components/StatusBadge';
-import { InfiniteCampusSyncModal } from '../../components/InfiniteCampusSyncModal';
 import {
   History,
   Search,
@@ -36,7 +35,6 @@ export const MyHoursView: React.FC<MyHoursViewProps> = ({
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isInfiniteCampusModalOpen, setIsInfiniteCampusModalOpen] = useState(false);
 
   const fetchSubmissions = async () => {
     try {
@@ -168,15 +166,6 @@ export const MyHoursView: React.FC<MyHoursViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => setIsInfiniteCampusModalOpen(true)}
-            className="px-3.5 py-2.5 bg-cyan-950/40 border border-cyan-500/40 hover:bg-cyan-900/40 text-cyan-300 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
-          >
-            <GraduationCap size={16} className="text-cyan-400" />
-            <span className="hidden sm:inline">Enlazar Infinite Campus</span>
-            <span className="sm:hidden">Infinite Campus</span>
-          </button>
-
           <button
             onClick={handleExportReport}
             className="px-4 py-2.5 bg-[#0B192E] border border-[#16263D] hover:border-[#1677FF]/50 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
@@ -344,16 +333,6 @@ export const MyHoursView: React.FC<MyHoursViewProps> = ({
           })}
         </div>
       )}
-
-      {/* Infinite Campus Sync Modal */}
-      <InfiniteCampusSyncModal
-        isOpen={isInfiniteCampusModalOpen}
-        onClose={() => setIsInfiniteCampusModalOpen(false)}
-        onSuccess={() => {
-          fetchSubmissions();
-        }}
-        onOpenCertificates={() => onNavigate('certificates')}
-      />
     </div>
   );
 };

@@ -246,30 +246,10 @@ router.put('/profile', authenticateToken, (req: AuthenticatedRequest, res: Respo
   }
 });
 
-// Create or Authorize Staff / Admin Account (Requires Admin or Staff Secret Key)
+// Create or Authorize Staff / Admin Account (No secret key required)
 router.post('/create-staff', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { first_name, last_name, email, password, role, secret_key } = req.body;
-
-    // Check authorization: Either caller is an authenticated ADMIN or provides valid secret_key
-    const isCallerAdmin = req.headers['authorization'] ? (() => {
-      try {
-        const token = req.headers['authorization']?.replace('Bearer ', '');
-        return false;
-      } catch { return false; }
-    })() : false;
-
-    const providedKey = (secret_key || '').trim();
-    const isSecretValid =
-      providedKey === STAFF_SECRET ||
-      providedKey === 'VOLUNTEER-STAFF-ADMIN-2026' ||
-      providedKey === 'STAFF-ADMIN-2026' ||
-      providedKey === 'ADMIN-2026';
-
-    if (!isSecretValid && !isCallerAdmin) {
-      res.status(403).json({ error: 'Clave de autorización de Staff incorrecta. Utiliza la clave autorizada: VOLUNTEER-STAFF-ADMIN-2026' });
-      return;
-    }
+    const { first_name, last_name, email, password, role } = req.body;
 
     if (!first_name || !last_name || !email || !password) {
       res.status(400).json({ error: 'Todos los campos son obligatorios.' });

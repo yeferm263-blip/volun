@@ -327,3 +327,32 @@ export interface ResourceItem {
   icon?: string;
   created_at: string;
 }
+
+export interface PublicVolunteerDetail {
+  id: string;
+  volunteer_id: string;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  school?: string;
+  organization?: string;
+  approved_hours: number;
+  approved_minutes: number;
+  rating_avg: number;
+  rating_count: number;
+  total_submissions: number;
+  join_date?: string;
+  bio?: string;
+  languages?: string[];
+  rank?: number;
+}
+
+export interface PublicReview {
+  id: string;
+  volunteer_id: string;
+  rating: number;
+  reviewer_name: string;
+  reviewer_relation?: string;
+  message?: string;
+  created_at: string;
+}

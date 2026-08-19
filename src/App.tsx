@@ -12,6 +12,7 @@ import { AboutView } from './views/public/AboutView';
 import { AppsView } from './views/public/AppsView';
 import { PublicEventsView } from './views/public/PublicEventsView';
 import { PublicEventDetailView } from './views/public/PublicEventDetailView';
+import { PublicVolunteersRankingView } from './views/public/PublicVolunteersRankingView';
 import { VolunteerInfoView } from './views/public/VolunteerInfoView';
 import { ResourcesView } from './views/public/ResourcesView';
 import { GalleryView } from './views/public/GalleryView';
@@ -46,12 +47,17 @@ import { StaffManagementView } from './views/staff/StaffManagementView';
 
 import { api } from './services/api';
 import { HourSubmission } from './types';
+import { useAchievementCelebration } from './hooks/useAchievementCelebration';
+import { AchievementCelebrationModal } from './components/AchievementCelebrationModal';
 
 export function App() {
   const { user, profile, loading, refreshUserData } = useAuth();
   const [currentView, setCurrentView] = useState<string>('home');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Global Automatic Achievement Celebration Watcher
+  const { unlockedQueue, clearQueue } = useAchievementCelebration();
 
   // Modals
   const [detailSubmission, setDetailSubmission] = useState<HourSubmission | null>(null);
@@ -119,6 +125,7 @@ export function App() {
     'home',
     'about',
     'apps',
+    'public-ranking',
     'public-events',
     'public-event-detail',
     'volunteer-info',
@@ -161,6 +168,9 @@ export function App() {
               }}
               onSelectEvent={handleSelectEvent}
             />
+          )}
+          {currentView === 'public-ranking' && (
+            <PublicVolunteersRankingView onNavigate={setCurrentView} />
           )}
           {currentView === 'about' && <AboutView onNavigate={setCurrentView} />}
           {currentView === 'apps' && <AppsView onNavigate={setCurrentView} />}
@@ -313,6 +323,19 @@ export function App() {
           refreshUserData();
         }}
       />
+
+      {/* Global Achievement & Silver Cord 160h Milestone Unlock Celebration */}
+      {unlockedQueue.length > 0 && (
+        <AchievementCelebrationModal
+          badges={unlockedQueue}
+          onClose={clearQueue}
+          onNavigateToCertificates={() => {
+            clearQueue();
+            setCurrentView('my-certificates');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      )}
     </div>
   );
 }

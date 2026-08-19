@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Calendar, Layers, BookOpen, Info, LogIn, User } from 'lucide-react';
+import { Menu, Calendar, Layers, BookOpen, Info, LogIn, User, Trophy } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../context/AuthContext';
 
@@ -52,6 +52,17 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
             }`}
           >
             Inicio
+          </button>
+          <button
+            onClick={() => onNavigate('public-ranking')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              currentView === 'public-ranking'
+                ? 'text-amber-300 bg-amber-500/10'
+                : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-500/10'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span>Ranking & Cuadro de Honor</span>
           </button>
           <button
             onClick={() => onNavigate('public-events')}

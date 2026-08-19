@@ -17,13 +17,12 @@ import {
   ChevronRight,
   FileCheck,
   Building,
-  GraduationCap,
+  Wand2,
   HeartHandshake,
   Compass,
   Shield,
-  Link2,
+  Star,
 } from 'lucide-react';
-import { InfiniteCampusSyncModal } from '../../components/InfiniteCampusSyncModal';
 
 interface VolunteerDashboardProps {
   onNavigate: (view: string) => void;
@@ -39,7 +38,6 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   const { profile } = useAuth();
   const [submissions, setSubmissions] = useState<HourSubmission[]>([]);
   const [myApplications, setMyApplications] = useState<EventApplication[]>([]);
-  const [isInfiniteCampusModalOpen, setIsInfiniteCampusModalOpen] = useState(false);
   const [stats, setStats] = useState({
     approved_minutes: 0,
     pending_minutes: 0,
@@ -126,13 +124,6 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => setIsInfiniteCampusModalOpen(true)}
-            className="bg-cyan-950/40 hover:bg-cyan-900/40 text-cyan-300 border border-cyan-500/40 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shrink-0 shadow-sm"
-          >
-            <GraduationCap size={15} className="text-cyan-400" />
-            <span>Enlazar Infinite Campus</span>
-          </button>
           <button
             onClick={() => onNavigate('public-events')}
             className="bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shrink-0"
@@ -577,16 +568,6 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           </div>
         </div>
       </section>
-
-      {/* Infinite Campus Integration Modal */}
-      <InfiniteCampusSyncModal
-        isOpen={isInfiniteCampusModalOpen}
-        onClose={() => setIsInfiniteCampusModalOpen(false)}
-        onSuccess={() => {
-          fetchDashboardData();
-        }}
-        onOpenCertificates={() => onNavigate('certificates')}
-      />
     </div>
   );
 };

@@ -67,6 +67,22 @@ router.get('/top-ranking', (req, res) => {
   }
 });
 
+// GET /api/public/silver-cord-160
+// Returns volunteers who reached the 160-hour Silver Cord milestone
+router.get('/silver-cord-160', (req, res) => {
+  try {
+    const honorees = db.getSilverCord160Honorees();
+    res.json({
+      success: true,
+      milestone_target: 160,
+      total: honorees.length,
+      honorees,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Error al obtener el cuadro de honor de 160 horas.' });
+  }
+});
+
 // GET /api/public/volunteers/:id
 router.get('/volunteers/:id', (req, res) => {
   try {

@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   ArrowLeft,
   ShieldCheck,
-  KeyRound,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 
@@ -27,7 +26,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [secretKey, setSecretKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,11 +54,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
       return;
     }
 
-    if (accountType === 'STAFF' && !secretKey.trim()) {
-      setError('Debes ingresar la clave de autorización de Staff o Administración.');
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -74,7 +67,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
             email: email.trim(),
             password,
             role: 'STAFF',
-            secret_key: secretKey.trim(),
           }),
         });
 
@@ -232,26 +224,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate }) => {
                 />
               </div>
             </div>
-
-            {accountType === 'STAFF' && (
-              <div>
-                <label className="block text-xs font-semibold text-purple-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
-                  <KeyRound size={14} />
-                  <span>Clave de Autorización Staff / Admin *</span>
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" size={18} />
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder="Ingresa la clave autorizada"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 bg-purple-500/10 border border-purple-500/30 focus:border-purple-400 rounded-xl text-sm text-white placeholder:text-purple-300/40 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>

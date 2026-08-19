@@ -14,6 +14,7 @@ import {
   UserCheck,
   X,
   ExternalLink,
+  Trophy,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../context/AuthContext';
@@ -65,6 +66,7 @@ export const PublicDrawer: React.FC<PublicDrawerProps> = ({
 
   const navItems = [
     { id: 'home', label: 'Inicio', icon: Home },
+    { id: 'public-ranking', label: 'Ranking & Cuadro de Honor', icon: Trophy },
     { id: 'about', label: 'Sobre DMPS Connect', icon: Info },
     { id: 'apps', label: 'Nuestras Apps', icon: Layers },
     { id: 'public-events', label: 'Eventos', icon: Calendar },

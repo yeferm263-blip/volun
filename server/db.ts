@@ -953,7 +953,7 @@ class Database {
       { hours: 10, minutes: 600 },
       { hours: 25, minutes: 1500 },
       { hours: 50, minutes: 3000 },
-      { hours: 100, minutes: 6000 },
+      { hours: 160, minutes: 9600 },
     ];
 
     const newlyIssued: Certificate[] = [];
@@ -1840,6 +1840,11 @@ class Database {
       rating_count: ratingCount,
       join_date: profile.join_date,
     };
+  }
+
+  public getSilverCord160Honorees(): any[] {
+    const list = this.getPublicVolunteersList();
+    return list.filter((v) => v.approved_hours >= 160 || v.approved_minutes >= 9600);
   }
 }
 

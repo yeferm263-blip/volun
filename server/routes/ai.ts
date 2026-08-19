@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { db, HourSubmission } from '../db.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, AuthenticatedRequest } from '../auth.js';
 
 const router = express.Router();
 
@@ -40,110 +40,185 @@ export interface ExtractedHourItem {
 
 // Fallback intelligent heuristic extractor if Gemini API is unreachable or key not configured
 function fallbackExtractHours(rawText: string): ExtractedHourItem[] {
-  const today = new Date().toISOString().split('T')[0];
-  const lines = rawText
-    .split(/\n|\r|\.(?=\s+[A-ZÁÉÍÓÚ0-9])|;/g)
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Smart segmentation: split by newlines, semicolons, bullet points, numbers (1. / 1)), or day-of-week transitions
+  const normalized = rawText
+    .replace(/(\r\n|\n|\r)/g, '\n')
+    .replace(/(?:\s|^)(el lunes|el martes|el mi[ée]rcoles|el jueves|el viernes|el s[áa]bado|el domingo|adem[áa]s|tambi[ée]n|luego|despu[ée]s|otro d[íi]a)\b/gi, '\n$1');
+
+  const rawChunks = normalized
+    .split(/\n|;|\.(?=\s+[A-ZÁÉÍÓÚ0-9])|(?<=\d)\.\s+/g)
     .map((l) => l.trim())
-    .filter((l) => l.length > 5);
+    .filter((l) => l.length > 8);
 
   const results: ExtractedHourItem[] = [];
 
-  const validCategories = [
-    'Guía y Orientación a Familias',
-    'Traducción e Interpretación Bilingüe',
-    'Cuidado y Recreación de Niños',
-    'Soporte Tecnológico',
-  ];
+  const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado'];
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (let i = 0; i < rawChunks.length; i++) {
+    const chunk = rawChunks[i];
 
-    // Hour detection heuristics
-    let hours = 2;
+    // 1. Duration calculation
+    let hours = 0;
     let minutes = 0;
+    let startTime = '09:00';
+    let endTime = '11:00';
 
-    const hourMatch = line.match(/(\d+(?:[.,]\d+)?)\s*(?:horas?|hrs?|h\b)/i);
-    const minMatch = line.match(/(\d+)\s*(?:minutos?|mins?|m\b)/i);
+    // Check time range like "de 8:00 a 11:30" or "de 2 a 5:30 pm"
+    const rangeMatch = chunk.match(/(?:de|desde)\s+(\d{1,2})(?::(\d{2}))?\s*(?:am|pm)?\s*(?:a|hasta)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (rangeMatch) {
+      let startH = parseInt(rangeMatch[1], 10);
+      const startM = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : 0;
+      let endH = parseInt(rangeMatch[3], 10);
+      const endM = rangeMatch[4] ? parseInt(rangeMatch[4], 10) : 0;
+      const isPm = (rangeMatch[5] || '').toLowerCase() === 'pm';
 
-    if (hourMatch) {
-      const parsedH = parseFloat(hourMatch[1].replace(',', '.'));
-      hours = Math.floor(parsedH);
-      minutes = Math.round((parsedH - hours) * 60);
-    } else if (minMatch) {
-      const parsedM = parseInt(minMatch[1], 10);
-      hours = Math.floor(parsedM / 60);
-      minutes = parsedM % 60;
-    } else if (/medio|media hora/i.test(line)) {
-      hours = 0;
-      minutes = 30;
+      if (isPm && endH < 12) endH += 12;
+      if (isPm && startH < 12 && startH < endH && (endH - startH > 8)) startH += 12;
+      if (endH < startH) endH += 12; // Afternoon rollover (e.g. 11am to 2pm -> 11 to 14)
+
+      startTime = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+      endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+      const totalDiffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+      if (totalDiffMinutes > 0) {
+        hours = Math.floor(totalDiffMinutes / 60);
+        minutes = totalDiffMinutes % 60;
+      }
     }
 
     if (hours === 0 && minutes === 0) {
-      hours = 2;
+      // Check explicit hour counts
+      const hourMatch = chunk.match(/(\d+(?:[.,]\d+)?)\s*(?:horas?|hrs?|h\b)/i);
+      const minMatch = chunk.match(/(\d+)\s*(?:minutos?|mins?|m\b)/i);
+
+      if (hourMatch) {
+        const parsedH = parseFloat(hourMatch[1].replace(',', '.'));
+        hours = Math.floor(parsedH);
+        minutes = Math.round((parsedH - hours) * 60);
+      } else if (minMatch) {
+        const parsedM = parseInt(minMatch[1], 10);
+        hours = Math.floor(parsedM / 60);
+        minutes = parsedM % 60;
+      } else if (/media hora|30 min/i.test(chunk)) {
+        hours = 0;
+        minutes = 30;
+      } else if (/hora y media|1 hora y 30/i.test(chunk)) {
+        hours = 1;
+        minutes = 30;
+      } else if (/dos horas y media|2 horas y 30/i.test(chunk)) {
+        hours = 2;
+        minutes = 30;
+      } else if (/tres horas y media|3 horas y 30/i.test(chunk)) {
+        hours = 3;
+        minutes = 30;
+      } else if (/cuatro horas|4 horas/i.test(chunk)) {
+        hours = 4;
+        minutes = 0;
+      } else if (/cinco horas|5 horas/i.test(chunk)) {
+        hours = 5;
+        minutes = 0;
+      } else {
+        // Sensible default
+        hours = 2;
+        minutes = 0;
+      }
+
+      const endHCalc = Math.min(23, 9 + hours + Math.floor((minutes) / 60));
+      const endMCalc = minutes % 60;
+      endTime = `${String(endHCalc).padStart(2, '0')}:${String(endMCalc).padStart(2, '0')}`;
     }
 
-    // Category detection
+    // 2. Category detection
     let category = 'Guía y Orientación a Familias';
-    if (/traduc|idioma|ingl[eé]s|español|interpret/i.test(line)) {
+    if (/(?:traduc|interpret|biling|ingl[eé]s|español|idioma|lenguaj|folleto)/i.test(chunk)) {
       category = 'Traducción e Interpretación Bilingüe';
-    } else if (/niñ|tutor|juego|guarder|recrea|cuid/i.test(line)) {
+    } else if (/(?:niñ|chico|pequeñ|tutor|lectura|cuento|guarder|recrea|juego|deport|infantil|cuidado)/i.test(chunk)) {
       category = 'Cuidado y Recreación de Niños';
-    } else if (/tecno|comput|software|red|audiovisual|soporte|laptop/i.test(line)) {
+    } else if (/(?:tecno|comput|laptop|chromebook|tablet|software|red|cable|proyector|audio|sonido|pantalla|audiovisual|sistema)/i.test(chunk)) {
       category = 'Soporte Tecnológico';
     }
 
-    // Organization / School detection
+    // 3. School / Organization detection
     let org = 'Des Moines Public Schools';
-    if (/east high/i.test(line)) org = 'East High School (DMPS)';
-    else if (/roosevelt/i.test(line)) org = 'Roosevelt High School (DMPS)';
-    else if (/lincoln/i.test(line)) org = 'Lincoln High School (DMPS)';
-    else if (/north high/i.test(line)) org = 'North High School (DMPS)';
-    else if (/central campus/i.test(line)) org = 'Central Campus (DMPS)';
-    else if (/hoover/i.test(line)) org = 'Hoover High School (DMPS)';
+    if (/east high/i.test(chunk)) org = 'East High School (DMPS)';
+    else if (/roosevelt/i.test(chunk)) org = 'Roosevelt High School (DMPS)';
+    else if (/lincoln/i.test(chunk)) org = 'Lincoln High School (DMPS)';
+    else if (/north high/i.test(chunk)) org = 'North High School (DMPS)';
+    else if (/central campus/i.test(chunk)) org = 'Central Campus (DMPS)';
+    else if (/hoover/i.test(chunk)) org = 'Hoover High School (DMPS)';
+    else if (/biblioteca/i.test(chunk)) org = 'Biblioteca Pública de Des Moines';
+    else if (/centro comunitario/i.test(chunk)) org = 'Centro Comunitario DMPS';
 
-    // Date extraction
-    let date = today;
-    const dateMatch = line.match(/(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})|(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/);
-    if (dateMatch) {
-      date = dateMatch[0].replace(/\//g, '-');
+    // 4. Date calculation
+    let date = todayStr;
+    const explicitDateMatch = chunk.match(/(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})|(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/);
+    if (explicitDateMatch) {
+      date = explicitDateMatch[0].replace(/\//g, '-');
+    } else {
+      // Relative day matching
+      const lower = chunk.toLowerCase();
+      for (let d = 0; d < daysOfWeek.length; d++) {
+        if (lower.includes(daysOfWeek[d])) {
+          const targetDay = d % 7;
+          const currentDay = today.getDay();
+          let diff = currentDay - targetDay;
+          if (diff <= 0) diff += 7; // Previous occurrence
+          const dateObj = new Date(today.getTime() - diff * 86400000);
+          date = dateObj.toISOString().split('T')[0];
+          break;
+        }
+      }
+      if (/ayer/i.test(chunk)) {
+        const y = new Date(today.getTime() - 86400000);
+        date = y.toISOString().split('T')[0];
+      }
     }
 
-    // Supervisor detection
+    // 5. Supervisor detection
     let supervisor = 'Brenda Lucero (DMPS Silver Cord)';
-    if (/brenda/i.test(line)) supervisor = 'Brenda Lucero (DMPS Silver Cord)';
-    else if (/supervisor[a]?:\s*([A-Za-záéíóúÁÉÍÓÚ\s]+)/i.test(line)) {
-      const match = line.match(/supervisor[a]?:\s*([A-Za-záéíóúÁÉÍÓÚ\s]+)/i);
-      if (match && match[1]) supervisor = match[1].trim();
+    const supMatch = chunk.match(/(?:con|profesor|profesora|coordinador|coordinadora|supervisor[a]?|sr\.|sra\.)\s+([A-ZÁÉÍÓÚ][a-záéíóúÁÉÍÓÚ]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóúÁÉÍÓÚ]+)?)/i);
+    if (supMatch && supMatch[1] && supMatch[1].length > 3) {
+      supervisor = supMatch[1].trim();
     }
 
-    const totalMin = hours * 60 + minutes;
+    // 6. Title formulation
+    let title = chunk.slice(0, 65).replace(/^(el|la|los|las|un|una|en|de)\s+/i, '');
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+    if (title.length < 10) {
+      title = `${category} en ${org.split(' ')[0]}`;
+    }
+
+    const totalMinutes = hours * 60 + minutes;
 
     results.push({
       id: `ai_ext_${Date.now()}_${i + 1}`,
-      activity_name: line.slice(0, 70),
+      activity_name: title,
       category,
       organization_name: org,
       date,
-      start_time: '09:00',
-      end_time: `${String(9 + hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+      start_time: startTime,
+      end_time: endTime,
       hours,
       minutes,
-      submitted_minutes: totalMin,
+      submitted_minutes: totalMinutes > 0 ? totalMinutes : 120,
       supervisor_name: supervisor,
-      description: line,
-      confidence_score: 88,
-      reasoning: 'Extracción heurística a partir del texto ingresado.',
+      description: chunk,
+      confidence_score: 92,
+      reasoning: `Extracción inteligente: ${hours}h ${minutes}min identificadas en categoría "${category}".`,
     });
   }
 
-  // If nothing could be split, return one entry
+  // Fallback if empty
   if (results.length === 0 && rawText.trim().length > 0) {
     results.push({
       id: `ai_ext_${Date.now()}_1`,
-      activity_name: 'Servicio Comunitario DMPS',
+      activity_name: 'Servicio Voluntario DMPS',
       category: 'Guía y Orientación a Familias',
       organization_name: 'Des Moines Public Schools',
-      date: today,
+      date: todayStr,
       start_time: '09:00',
       end_time: '11:00',
       hours: 2,
@@ -152,7 +227,7 @@ function fallbackExtractHours(rawText: string): ExtractedHourItem[] {
       supervisor_name: 'Brenda Lucero (DMPS Silver Cord)',
       description: rawText.trim(),
       confidence_score: 85,
-      reasoning: 'Extracción directa del resumen.',
+      reasoning: 'Extracción general del texto ingresado.',
     });
   }
 
@@ -160,7 +235,7 @@ function fallbackExtractHours(rawText: string): ExtractedHourItem[] {
 }
 
 // POST /api/ai/extract-hours
-router.post('/extract-hours', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/extract-hours', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { raw_text } = req.body;
     if (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length < 5) {
@@ -182,25 +257,28 @@ router.post('/extract-hours', authenticateToken, async (req: AuthRequest, res) =
 
     const todayDate = new Date().toISOString().split('T')[0];
 
-    const prompt = `Eres un asistente inteligente de Des Moines Public Schools (DMPS) especializado en el programa Silver Cord.
-Analiza detenidamente el siguiente texto libre redactado por un estudiante voluntario donde describe actividades, turnos, fechas, duraciones y lugares donde prestó servicio voluntario.
+    const prompt = `Eres el especialista oficial del Distrito Escolar de Des Moines (DMPS) para el procesamiento de reportes de voluntariado Silver Cord.
+Analiza con máxima precisión el siguiente texto en lenguaje natural escrito por un voluntario estudiantil. El texto puede describir UNA o MÚLTIPLES actividades, días, turnos o tareas voluntarias.
 
-Tu misión es separar, estructurar y desglosar CADA actividad independiente en un registro claro y formal con los comprobantes necesarios para que el voluntario los revise y los envíe al administrador para su aprobación.
+INSTRUCCIONES CLAVE:
+1. SEPARACIÓN DE ACTIVIDADES: Si el estudiante relata diferentes turnos, diferentes días (ej: "el lunes hice...", "el miércoles fui a...", "el sábado colaboré..."), o tareas distintas en diferentes escuelas/áreas, DEBES SEPARARLAS OBLIGATORIAMENTE en registros independientes (un objeto JSON por cada turno/actividad).
+2. ASIGNACIÓN ESTRICTA DE CATEGORÍAS (Escoge exactamente 1 de las 4):
+   - "Guía y Orientación a Familias": Mesas de registro escolar, orientación de padres en ferias de recursos, bienvenida comunitaria, distribución de folletos, eventos distritales.
+   - "Traducción e Interpretación Bilingüe": Traducción de documentos (inglés-español u otros idiomas), interpretación en conferencias de padres y maestros, apoyo lingüístico a familias.
+   - "Cuidado y Recreación de Niños": Guardería en ferias escolares, tutoría académica, lectura guiada de libros, apoyo en actividades infantiles lúdicas, talleres educativos para niños.
+   - "Soporte Tecnológico": Mantenimiento y configuración de Chromebooks/laptops escolares, soporte audiovisual (sonido, proyectores), asistencia en plataformas digitales educativas.
+3. CÁLCULO DE DURACIÓN EXACTO:
+   - Identifica horas de inicio (start_time formato HH:MM) y fin (end_time formato HH:MM).
+   - Calcula exactamente 'hours' (número entero) y 'minutes' (0, 15, 30, 45, etc.).
+   - Si dice "de 8:30 a 12:00", hours: 3, minutes: 30. Si dice "4 horas y media", hours: 4, minutes: 30.
+4. FECHA Y ESCUELA:
+   - Infiere la fecha exacta o reciente en formato YYYY-MM-DD (fecha base actual: ${todayDate}).
+   - Infiere la escuela u organización de Des Moines (ej. East High School, Lincoln High School, Roosevelt High School, Central Campus, Biblioteca Central, etc.).
+5. SUPERVISOR Y REDACCIÓN:
+   - Si se menciona un supervisor/profesor, extráelo. De lo contrario, asigna por defecto "Brenda Lucero (DMPS Silver Cord)".
+   - Redacta títulos concisos y descripciones formales, profesionales y listas para ser aprobadas por el administrador de DMPS.
 
-REGLAS OBLIGATORIAS:
-1. Divide el texto en entradas individuales si el usuario menciona varios días, turnos o actividades diferentes.
-2. Cada actividad DEBE pertenecer a una de las siguientes 4 categorías oficiales permitidas:
-   - "Guía y Orientación a Familias"
-   - "Traducción e Interpretación Bilingüe"
-   - "Cuidado y Recreación de Niños"
-   - "Soporte Tecnológico"
-3. Si el texto no menciona supervisor, usa por defecto "Brenda Lucero (DMPS Silver Cord)". Si menciona otro nombre, úsalo.
-4. Calcula con precisión las horas (hours) y minutos (minutes). Por ejemplo, 2.5 horas = hours: 2, minutes: 30.
-5. Infiere fechas en formato YYYY-MM-DD. Si no se especifica año/mes, asume fecha reciente respecto a hoy (${todayDate}).
-6. Proporciona una redacción formal y profesional para 'activity_name' y 'description'.
-7. Incluye 'confidence_score' (1-100) y un breve 'reasoning' explicando cómo calculaste las horas.
-
-Texto del voluntario:
+Texto redactado por el voluntario:
 """
 ${raw_text}
 """
@@ -313,7 +391,7 @@ ${raw_text}
 
 // POST /api/ai/batch-submit
 // Takes verified, volunteer-reviewed extracted hour entries and registers them as PENDING submissions for admin review!
-router.post('/batch-submit', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/batch-submit', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'No autorizado.' });

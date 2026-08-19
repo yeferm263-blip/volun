@@ -19,6 +19,8 @@ import {
   Shield,
   Clock,
   Sparkles,
+  Crown,
+  Medal,
 } from 'lucide-react';
 
 export const VolunteerProfileView: React.FC = () => {
@@ -96,6 +98,41 @@ export const VolunteerProfileView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-fadeIn">
           <X size={16} className="text-rose-400 shrink-0" />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* 160+ Hours Silver Cord Official Completion Banner */}
+      {(stats?.approved_minutes || 0) >= 9600 && (
+        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#171105] via-[#2A1E07] to-[#171105] border-2 border-amber-500/60 shadow-[0_0_35px_rgba(245,158,11,0.25)] relative overflow-hidden animate-fadeIn">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 p-0.5 shadow-lg shadow-amber-500/30 flex items-center justify-center shrink-0">
+                <div className="w-full h-full rounded-[14px] bg-slate-950 flex items-center justify-center">
+                  <Crown size={24} className="text-amber-400 animate-pulse" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                    Graduado Oficial Silver Cord
+                  </span>
+                  <span className="text-xs text-amber-400 font-bold hidden sm:inline">★ 160+ Horas Cumplidas</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white tracking-tight mt-0.5">
+                  Programa Silver Cord de Des Moines Public Schools Completado
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Has obtenido con honor el <strong>Cordón de Plata de Graduación</strong> y la máxima mención distrital. Sigue registrando horas para ampliar tu legado cívico.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center shrink-0">
+              <div className="text-[10px] text-amber-400/80 uppercase font-semibold">Estado Oficial</div>
+              <div>ACREDITADO PARA TOGA</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -412,23 +449,6 @@ export const VolunteerProfileView: React.FC = () => {
             </div>
           </form>
         )}
-      </div>
-
-      {/* Volunteer Rank Shields & Achievements Recognition */}
-      <div className="pt-2">
-        <VolunteerRankShields
-          approvedMinutes={profile?.approved_minutes || stats?.approved_minutes || 0}
-          totalSubmissions={profile?.total_submissions || stats?.total_submissions || 0}
-          volunteerProfile={{
-            first_name: profile?.first_name,
-            last_name: profile?.last_name,
-            volunteer_id: profile?.volunteer_id,
-            school: profile?.school,
-            grade: profile?.grade,
-            join_date: profile?.join_date,
-            phone: profile?.phone,
-          }}
-        />
       </div>
 
       {/* Security and Privacy statement */}

@@ -10,6 +10,8 @@ import {
   MonthlyStatsItem,
   SchoolStatsItem,
   TopVolunteerItem,
+  PublicVolunteerDetail,
+  PublicReview,
 } from '../types';
 
 const API_BASE = '/api';
@@ -206,36 +208,110 @@ export const api = {
     return handleResponse<{ message: string; submission: HourSubmission }>(res);
   },
 
-  async syncInfiniteCampus(data?: { student_id?: string; entries?: any[] }) {
-    const res = await fetch(`${API_BASE}/submissions/sync-infinite-campus`, {
+  // AI Text-to-Hours Processing & Batch Submission
+  async extractHoursAI(raw_text: string) {
+    const res = await fetch(`${API_BASE}/ai/extract-hours`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
       },
-      body: JSON.stringify(data || {}),
+      body: JSON.stringify({ raw_text }),
     });
     return handleResponse<{
+      success: boolean;
+      source: string;
+      entries: any[];
       message: string;
-      imported_count: number;
-      duplicate_count: number;
-      total_new_minutes: number;
-      total_infinite_campus_minutes: number;
-      new_submissions: HourSubmission[];
-      portal_url: string;
     }>(res);
   },
 
-  async getInfiniteCampusStatus() {
-    const res = await fetch(`${API_BASE}/submissions/infinite-campus-status`, {
-      headers: { ...getAuthHeader() },
+  async submitBatchHours(items: any[]) {
+    const res = await fetch(`${API_BASE}/ai/batch-submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ items }),
     });
     return handleResponse<{
-      is_connected: boolean;
-      total_imported_records: number;
-      total_imported_minutes: number;
-      last_sync_date: string | null;
-      portal_url: string;
+      success: boolean;
+      count: number;
+      total_minutes: number;
+      submissions: any[];
+      message: string;
+    }>(res);
+  },
+
+  // Public Volunteers, Ranking & Community Reviews
+  async getPublicVolunteers(filters?: { search?: string; school?: string; sort?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.school && filters.school !== 'ALL') params.append('school', filters.school);
+    if (filters?.sort) params.append('sort', filters.sort);
+
+    const res = await fetch(`${API_BASE}/public/volunteers?${params.toString()}`);
+    return handleResponse<{
+      success: boolean;
+      total: number;
+      volunteers: PublicVolunteerDetail[];
+    }>(res);
+  },
+
+  async getTopRanking() {
+    const res = await fetch(`${API_BASE}/public/top-ranking`);
+    return handleResponse<{ success: boolean; top: PublicVolunteerDetail[] }>(res);
+  },
+
+  async getSilverCord160Honorees() {
+    const res = await fetch(`${API_BASE}/public/silver-cord-160`);
+    return handleResponse<{
+      success: boolean;
+      milestone_target: number;
+      total: number;
+      honorees: Array<{
+        id: string;
+        volunteer_id: string;
+        first_name: string;
+        last_name: string;
+        school: string;
+        approved_minutes: number;
+        approved_hours: number;
+        rank: string;
+        rating_avg: number;
+        rating_count: number;
+        certificate_code?: string;
+        completed_date?: string;
+      }>;
+    }>(res);
+  },
+
+  async getPublicVolunteerDetail(id: string) {
+    const res = await fetch(`${API_BASE}/public/volunteers/${id}`);
+    return handleResponse<{ success: boolean; volunteer: PublicVolunteerDetail }>(res);
+  },
+
+  async getVolunteerReviews(id: string) {
+    const res = await fetch(`${API_BASE}/public/volunteers/${id}/reviews`);
+    return handleResponse<{ success: boolean; reviews: PublicReview[]; count: number; rating_avg: number }>(res);
+  },
+
+  async submitVolunteerReview(
+    id: string,
+    data: { rating: number; reviewer_name: string; reviewer_relation?: string; message?: string }
+  ) {
+    const res = await fetch(`${API_BASE}/public/volunteers/${id}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<{
+      success: boolean;
+      message: string;
+      review: PublicReview;
+      rating_avg: number;
+      rating_count: number;
     }>(res);
   },
 

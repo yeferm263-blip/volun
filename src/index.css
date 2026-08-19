@@ -48,3 +48,48 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
+
+/* Gold Medallion 3D Spin & Aura Animations */
+@keyframes spin3d {
+  0% {
+    transform: perspective(700px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(700px) rotateY(360deg);
+  }
+}
+
+@keyframes goldRaysRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes goldFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-spin-3d {
+  animation: spin3d 4.5s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.animate-gold-rays {
+  animation: goldRaysRotate 12s linear infinite;
+}
+
+.animate-gold-float {
+  animation: goldFloat 3s ease-in-out infinite;
+}
+
