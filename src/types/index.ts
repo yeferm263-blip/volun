@@ -328,6 +328,24 @@ export interface ResourceItem {
   created_at: string;
 }
 
+export interface PodiumMedal {
+  place: 1 | 2 | 3;
+  tier: 'GOLD' | 'SILVER' | 'BRONZE';
+  name: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color_gradient: string;
+  badge_bg: string;
+  border_color: string;
+  text_color: string;
+  glow_color: string;
+  is_active: boolean;
+  is_permanent: boolean;
+  days_on_podium: number;
+  description: string;
+}
+
 export interface PublicVolunteerDetail {
   id: string;
   volunteer_id: string;
@@ -340,11 +358,16 @@ export interface PublicVolunteerDetail {
   approved_minutes: number;
   rating_avg: number;
   rating_count: number;
-  total_submissions: number;
+  total_submissions?: number;
+  total_approved_submissions?: number;
   join_date?: string;
   bio?: string;
   languages?: string[];
   rank?: number;
+  podium_place?: 1 | 2 | 3 | null;
+  podium_medals?: PodiumMedal[];
+  certificates?: Certificate[];
+  reviews?: PublicReview[];
 }
 
 export interface PublicReview {
@@ -354,5 +377,22 @@ export interface PublicReview {
   reviewer_name: string;
   reviewer_relation?: string;
   message?: string;
+  is_reported?: boolean;
   created_at: string;
+}
+
+export interface ReviewReport {
+  id: string;
+  review_id: string;
+  volunteer_id: string;
+  volunteer_name: string;
+  reporter_name?: string;
+  reason: string;
+  details?: string;
+  status: 'PENDING' | 'RESOLVED_DELETED' | 'RESOLVED_DISMISSED';
+  review_snapshot: PublicReview;
+  created_at: string;
+  resolved_at?: string;
+  resolved_by?: string;
+  staff_resolution_note?: string;
 }

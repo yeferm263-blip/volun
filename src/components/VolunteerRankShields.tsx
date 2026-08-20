@@ -358,6 +358,79 @@ export const VolunteerRankShields: React.FC<VolunteerRankShieldsProps> = ({
         )}
       </div>
 
+      {/* Podium Honor Badges Showcase */}
+      <div className="bg-[#07111F] border border-amber-500/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+          <div>
+            <div className="flex items-center gap-2">
+              <Crown className="text-amber-400" size={22} />
+              <h3 className="text-base sm:text-lg font-bold text-white">
+                Insignias Especiales de Podio & Ranking Distrital
+              </h3>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Los 3 primeros lugares del ranking distrital reciben medallas conmemorativas y distintivos exclusivos.
+            </p>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold shrink-0">
+            Regla de 1 Mes: Medalla Permanente
+          </div>
+        </div>
+
+        {/* 3 Stepped Podium Badges Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 relative z-10">
+          {/* Gold #1 */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-950/40 to-[#0B192E] border border-amber-400/50 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-300 to-yellow-500 flex items-center justify-center text-slate-950 shadow-md">
+                <Crown size={20} className="text-slate-950" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">1er Puesto</span>
+                <h4 className="text-xs font-bold text-white">Corona de Oro Distrital</h4>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Otorga la insignia dorada máxima y acumula simultáneamente las medallas de Plata y Bronce.
+            </p>
+          </div>
+
+          {/* Silver #2 */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/40 to-[#0B192E] border border-slate-400/40 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center text-slate-950 shadow-md">
+                <Shield size={20} className="text-slate-950" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-wider block">2do Puesto</span>
+                <h4 className="text-xs font-bold text-white">Escudo de Plata</h4>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Insignia de plata al segundo lugar distrital y suma la medalla de Bronce.
+            </p>
+          </div>
+
+          {/* Bronze #3 */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-900/30 to-[#0B192E] border border-amber-600/40 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center text-white shadow-md">
+                <Medal size={20} className="text-white" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">3er Puesto</span>
+                <h4 className="text-xs font-bold text-white">Medalla de Bronce</h4>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Insignia de bronce al tercer lugar del podio distrital.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 2. Ranks & Shields Ladder */}
       <div className="space-y-4">
         <div>

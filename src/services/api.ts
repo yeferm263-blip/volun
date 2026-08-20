@@ -299,7 +299,7 @@ export const api = {
 
   async submitVolunteerReview(
     id: string,
-    data: { rating: number; reviewer_name: string; reviewer_relation?: string; message?: string }
+    data: { rating: number; reviewer_name?: string; reviewer_relation?: string; message?: string }
   ) {
     const res = await fetch(`${API_BASE}/public/volunteers/${id}/reviews`, {
       method: 'POST',
@@ -312,6 +312,61 @@ export const api = {
       review: PublicReview;
       rating_avg: number;
       rating_count: number;
+    }>(res);
+  },
+
+  async reportVolunteerReview(
+    reviewId: string,
+    data: { reason: string; reporter_name?: string; details?: string }
+  ) {
+    const res = await fetch(`${API_BASE}/public/reviews/${reviewId}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<{
+      success: boolean;
+      message: string;
+      report: any;
+    }>(res);
+  },
+
+  async getStaffReviewReports() {
+    const res = await fetch(`${API_BASE}/public/staff/reports`, {
+      headers: { ...getAuthHeader() },
+    });
+    return handleResponse<{ success: boolean; reports: any[] }>(res);
+  },
+
+  async deleteReviewByStaff(reviewId: string, reason?: string) {
+    const res = await fetch(`${API_BASE}/public/staff/reviews/${reviewId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ reason }),
+    });
+    return handleResponse<{
+      success: boolean;
+      message: string;
+      volunteer_id: string;
+    }>(res);
+  },
+
+  async dismissReviewReport(reportId: string, note?: string) {
+    const res = await fetch(`${API_BASE}/public/staff/reports/${reportId}/dismiss`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ note }),
+    });
+    return handleResponse<{
+      success: boolean;
+      message: string;
+      report: any;
     }>(res);
   },
 

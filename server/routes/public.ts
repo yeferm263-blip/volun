@@ -124,7 +124,7 @@ router.get('/volunteers/:id/reviews', (req, res) => {
 });
 
 // POST /api/public/volunteers/:id/reviews
-// No login required! Anyone in the community can rate and leave a short message
+// No mandatory complicated fields: just rating (1-5) and optional text message and name!
 router.post('/volunteers/:id/reviews', (req, res) => {
   try {
     const detail = db.getPublicVolunteerDetail(req.params.id);
@@ -136,18 +136,14 @@ router.post('/volunteers/:id/reviews', (req, res) => {
 
     const numRating = parseInt(rating, 10);
     if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-      return res.status(400).json({ error: 'La calificación debe ser entre 1 y 5 estrellas.' });
-    }
-
-    if (!reviewer_name || reviewer_name.trim().length < 2) {
-      return res.status(400).json({ error: 'Por favor ingresa tu nombre o identificación.' });
+      return res.status(400).json({ error: 'Por favor selecciona una calificación de 1 a 5 estrellas.' });
     }
 
     const createdReview = db.addPublicReview({
       volunteer_id: detail.id,
       rating: numRating,
-      reviewer_name: reviewer_name.trim(),
-      reviewer_relation: reviewer_relation?.trim() || 'Miembro de la Comunidad',
+      reviewer_name: reviewer_name && reviewer_name.trim().length > 0 ? reviewer_name.trim() : 'Miembro de la Comunidad',
+      reviewer_relation: reviewer_relation?.trim() || 'Comunidad Escolar',
       message: message ? message.trim().slice(0, 500) : undefined,
     });
 
@@ -158,11 +154,83 @@ router.post('/volunteers/:id/reviews', (req, res) => {
       review: createdReview,
       rating_avg: updatedDetail.rating_avg,
       rating_count: updatedDetail.rating_count,
-      message: '¡Gracias por valorar y reconocer la labor comunitaria de este voluntario!',
+      message: '¡Gracias por dejar tu reseña y reconocer a este voluntario!',
     });
   } catch (err: any) {
     console.error('Error submitting public review:', err);
     res.status(500).json({ error: err.message || 'Error al registrar la calificación.' });
+  }
+});
+
+// POST /api/public/reviews/:id/report
+// Any volunteer or visitor can report an inappropriate review with 3 quick reasons
+router.post('/reviews/:id/report', (req, res) => {
+  try {
+    const { reason, reporter_name, details } = req.body;
+    if (!reason) {
+      return res.status(400).json({ error: 'Por favor selecciona el motivo de la denuncia.' });
+    }
+
+    const report = db.reportPublicReview(req.params.id, {
+      reason,
+      reporter_name,
+      details,
+    });
+
+    res.json({
+      success: true,
+      report,
+      message: 'Denuncia enviada al equipo de Staff. Se revisará a la brevedad para su eliminación si incumple las normas.',
+    });
+  } catch (err: any) {
+    console.error('Error reporting review:', err);
+    res.status(500).json({ error: err.message || 'Error al enviar la denuncia de la reseña.' });
+  }
+});
+
+// GET /api/public/staff-review-reports
+// Staff: Get list of reported reviews
+router.get('/staff/reports', (req, res) => {
+  try {
+    const reports = db.getReviewReports();
+    res.json({ success: true, reports });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Error al obtener reportes de reseñas.' });
+  }
+});
+
+// DELETE /api/public/staff/reviews/:id
+// Staff: Delete an inappropriate review and recalculate ratings / milestones
+router.delete('/staff/reviews/:id', (req, res) => {
+  try {
+    const staffName = (req.headers['x-staff-name'] as string) || 'Staff DMPS';
+    const reason = (req.body?.reason as string) || (req.query.reason as string) || 'Contenido inapropiado eliminado por Staff';
+    
+    const result = db.deleteReviewByStaff(req.params.id, staffName, reason);
+    res.json({
+      success: true,
+      message: 'Reseña eliminada con éxito. El promedio de estrellas y los reconocimientos asociados del voluntario han sido recalculados de inmediato.',
+      volunteer_id: result.volunteer_id,
+    });
+  } catch (err: any) {
+    console.error('Error deleting review by staff:', err);
+    res.status(500).json({ error: err.message || 'Error al eliminar la reseña.' });
+  }
+});
+
+// POST /api/public/staff/reports/:id/dismiss
+router.post('/staff/reports/:id/dismiss', (req, res) => {
+  try {
+    const staffName = (req.headers['x-staff-name'] as string) || 'Staff DMPS';
+    const { note } = req.body;
+    const report = db.dismissReviewReport(req.params.id, staffName, note);
+    res.json({
+      success: true,
+      report,
+      message: 'Reporte desestimado correctamente.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error al desestimar reporte.' });
   }
 });
 

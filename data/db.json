@@ -4,5 +4,174 @@
   "hour_submissions": [],
   "notifications": [],
   "audit_logs": [],
-  "volunteer_counter": 1
+  "volunteer_counter": 1,
+  "events": [
+    {
+      "id": "evt_feria_recursos_2026",
+      "title": "Feria Comunitaria de Recursos y Salud Escolar",
+      "short_description": "Apoyo en recepción, traducción español-inglés, orientación a familias y entrega de materiales informativos.",
+      "description": "La Feria Comunitaria reúne a decenas de organizaciones locales para brindar recursos de salud, nutrición y educación a las familias del distrito. Los voluntarios asistirán en la mesa de registro, guiarán a los asistentes, apoyarán con interpretación bilingüe y colaborarán en la logística de los stands informativos.",
+      "date": "2026-09-12",
+      "start_time": "08:30",
+      "end_time": "13:30",
+      "location": "Centro Comunitario Lincoln, Salón Principal",
+      "estimated_minutes": 300,
+      "total_spots": 15,
+      "available_spots": 8,
+      "languages": [
+        "Español",
+        "Inglés"
+      ],
+      "requirements": [
+        "Puntualidad",
+        "Excelente trato comunitario",
+        "Uso de camiseta de voluntario"
+      ],
+      "min_age": 14,
+      "important_info": "Se proporcionará refrigerio y acreditación oficial de horas de voluntariado.",
+      "organizer": "DMPS Connect & Enlace Comunitario",
+      "status": "OPEN",
+      "code": "REG-5021",
+      "created_at": "2026-08-19T23:45:34.701Z",
+      "updated_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "evt_taller_digital_familias",
+      "title": "Taller de Alfabetización Digital para Familias",
+      "short_description": "Ayuda técnica individual a padres de familia en el uso del portal escolar y herramientas educativas.",
+      "description": "Sesión práctica guiada para orientar a padres de familia y tutores en la navegación de plataformas educativas, consulta de calificaciones, acceso a DMPS Info y comunicación con docentes. Los voluntarios trabajarán uno a uno con las familias.",
+      "date": "2026-09-19",
+      "start_time": "10:00",
+      "end_time": "14:00",
+      "location": "Biblioteca Pública Central, Laboratorio de Cómputo 2",
+      "estimated_minutes": 240,
+      "total_spots": 10,
+      "available_spots": 3,
+      "languages": [
+        "Español",
+        "Inglés",
+        "Bilingüe preferido"
+      ],
+      "requirements": [
+        "Conocimientos básicos de computación",
+        "Paciencia y vocación de servicio"
+      ],
+      "min_age": 15,
+      "important_info": "Capacitación previa de 20 minutos al inicio de la jornada.",
+      "organizer": "Equipo Tecnológico DMPS Connect",
+      "status": "FEW_SPOTS",
+      "code": "REG-8214",
+      "created_at": "2026-08-19T23:45:34.701Z",
+      "updated_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "evt_jornada_utiles_alimentos",
+      "title": "Jornada de Empaque y Distribución de Alimentos y Útiles",
+      "short_description": "Clasificación de víveres, empaque de paquetes escolares y distribución vehicular para familias.",
+      "description": "Jornada de impacto directo donde se preparan y entregan cajas de alimentos no perecederos y kits de útiles escolares para estudiantes y familias del área metropolitana.",
+      "date": "2026-09-26",
+      "start_time": "08:00",
+      "end_time": "12:30",
+      "location": "Almacén Comunitario East Side, Bahía de Carga 4",
+      "estimated_minutes": 270,
+      "total_spots": 20,
+      "available_spots": 14,
+      "languages": [
+        "Español",
+        "Inglés"
+      ],
+      "requirements": [
+        "Capacidad para levantar cajas ligeras",
+        "Ropa cómoda y calzado cerrado"
+      ],
+      "min_age": 14,
+      "important_info": "Agua y refrigerios incluidos.",
+      "organizer": "Red Solidaria & DMPS Connect",
+      "status": "OPEN",
+      "code": "REG-3390",
+      "created_at": "2026-08-19T23:45:34.701Z",
+      "updated_at": "2026-08-19T23:45:34.701Z"
+    }
+  ],
+  "event_applications": [],
+  "certificates": [],
+  "announcements": [
+    {
+      "id": "ann_welcome_hub",
+      "title": "¡Bienvenidos al nuevo DMPS Connect Hub!",
+      "message": "Explora los eventos comunitarios de este ciclo, solicita tu cupo y registra tus horas verificadas de forma sencilla y transparente.",
+      "audience": "ALL",
+      "active": true,
+      "category": "info",
+      "created_by": "DMPS Connect Staff",
+      "created_at": "2026-08-19T23:45:34.702Z"
+    }
+  ],
+  "gallery": [],
+  "faqs": [
+    {
+      "id": "faq_1",
+      "question": "¿Cómo se acreditan las horas de un evento?",
+      "answer": "Ser aceptado en un evento no otorga horas automáticamente. Una vez finalizado el evento, debes ingresar a \"Mis Eventos\" o \"Registrar Horas\", reportar tu hora real de llegada y salida. El equipo de Staff revisará y aprobará tu participación antes de que se sumen a tu perfil oficial.",
+      "category": "Horas y Eventos",
+      "published": true,
+      "order": 1,
+      "created_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "faq_2",
+      "question": "¿Qué pasa si me inscribí en un evento pero no podré asistir?",
+      "answer": "Puedes presionar el botón \"No puedo asistir\" desde el detalle del evento antes de que inicie. Esto liberará automáticamente el cupo para que otro voluntario en lista de espera pueda participar.",
+      "category": "Eventos",
+      "published": true,
+      "order": 2,
+      "created_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "faq_3",
+      "question": "¿Cuándo recibo un certificado de reconocimiento?",
+      "answer": "El sistema genera automáticamente certificados oficiales al alcanzar 10, 25, 50 y 100 horas verificadas. Además, el Staff puede emitir certificados especiales de mérito.",
+      "category": "Certificados",
+      "published": true,
+      "order": 3,
+      "created_at": "2026-08-19T23:45:34.701Z"
+    }
+  ],
+  "contact_messages": [],
+  "resources": [
+    {
+      "id": "res_guia_registro_horas",
+      "title": "Guía Paso a Paso para Registrar tus Horas de Voluntariado",
+      "description": "Instructivo oficial en formato PDF para registrar correctamente actividades, adjuntar comprobantes y enviar horas a revisión.",
+      "category": "guias",
+      "url": "#",
+      "created_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "res_politica_graduacion",
+      "title": "Criterios de Graduación y Reconocimiento de Servicio Comunitario",
+      "description": "Reglamento distrital sobre horas válidas, organizaciones aliadas acreditadas y plazos de entrega por semestre.",
+      "category": "informacion",
+      "url": "#",
+      "created_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "res_capacitacion_liderazgo",
+      "title": "Módulo de Capacitación: Liderazgo y Trabajo en Equipo Comunitario",
+      "description": "Material interactivo de formación previa para coordinadores estudiantiles y líderes de evento.",
+      "category": "capacitaciones",
+      "url": "#",
+      "created_at": "2026-08-19T23:45:34.701Z"
+    },
+    {
+      "id": "res_preguntas_frecuentes_portal",
+      "title": "Preguntas Frecuentes sobre el Portal DMPS Connect",
+      "description": "Respuestas rápidas sobre cómo solicitar cupos en eventos, qué hacer si rechazan una solicitud y cómo descargar certificados.",
+      "category": "faq",
+      "url": "#",
+      "created_at": "2026-08-19T23:45:34.701Z"
+    }
+  ],
+  "public_reviews": [],
+  "review_reports": []
 }

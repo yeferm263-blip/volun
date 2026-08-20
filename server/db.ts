@@ -265,9 +265,34 @@ export interface PublicReview {
   volunteer_id: string; // Profile ID
   rating: number; // 1 to 5
   reviewer_name: string;
-  reviewer_relation: string; // e.g. "Padre de Familia", "Maestro / Coordinador", "Compañero Voluntario", "Comunidad"
+  reviewer_relation?: string; // e.g. "Padre de Familia", "Maestro / Coordinador", "Compañero Voluntario", "Comunidad"
   message?: string;
+  is_reported?: boolean;
   created_at: string;
+}
+
+export interface ReviewReport {
+  id: string;
+  review_id: string;
+  volunteer_id: string;
+  volunteer_name: string;
+  reporter_name?: string;
+  reason: string; // e.g. 'Contenido Inapropiado / Ofensivo' | 'Spam o Reseña Falsa' | 'Información Fuera de Lugar'
+  details?: string;
+  status: 'PENDING' | 'RESOLVED_DELETED' | 'RESOLVED_DISMISSED';
+  review_snapshot: {
+    id: string;
+    volunteer_id: string;
+    rating: number;
+    reviewer_name: string;
+    reviewer_relation?: string;
+    message?: string;
+    created_at: string;
+  };
+  created_at: string;
+  resolved_at?: string;
+  resolved_by?: string;
+  staff_resolution_note?: string;
 }
 
 export interface ResourceItem {
@@ -295,6 +320,7 @@ interface DatabaseSchema {
   contact_messages: ContactMessage[];
   resources: ResourceItem[];
   public_reviews: PublicReview[];
+  review_reports: ReviewReport[];
   volunteer_counter: number;
 }
 
@@ -327,6 +353,7 @@ class Database {
         if (!this.data.contact_messages) this.data.contact_messages = [];
         if (!this.data.resources) this.data.resources = [];
         if (!this.data.public_reviews) this.data.public_reviews = [];
+        if (!this.data.review_reports) this.data.review_reports = [];
         if (typeof this.data.volunteer_counter !== 'number') this.data.volunteer_counter = 1;
         
         if (this.data.events.length === 0) {
@@ -340,9 +367,6 @@ class Database {
         }
         if (this.data.announcements.length === 0) {
           this.seedInitialAnnouncements();
-        }
-        if (this.data.public_reviews.length === 0) {
-          this.seedInitialReviews();
         }
       } catch (e) {
         console.error('Error reading db.json, initializing empty db', e);
@@ -526,41 +550,6 @@ class Database {
     this.save();
   }
 
-  private seedInitialReviews() {
-    const sampleReviews: PublicReview[] = [
-      {
-        id: 'rev_seed_001',
-        volunteer_id: 'prof_vol_001',
-        rating: 5,
-        reviewer_name: 'María Rodríguez (Familia DMPS)',
-        reviewer_relation: 'Padre de Familia',
-        message: '¡Excelente voluntario! Nos ayudó muchísimo con la interpretación en la junta escolar y su amabilidad fue excepcional con mi familia.',
-        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-      },
-      {
-        id: 'rev_seed_002',
-        volunteer_id: 'prof_vol_001',
-        rating: 5,
-        reviewer_name: 'Prof. Carlos Mendoza',
-        reviewer_relation: 'Maestro / Coordinador',
-        message: 'Muy puntual, proactivo y siempre dispuesto a colaborar en la logística del evento. Un orgullo para Des Moines Public Schools.',
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-      },
-      {
-        id: 'rev_seed_003',
-        volunteer_id: 'prof_vol_001',
-        rating: 5,
-        reviewer_name: 'Ana Sofía G.',
-        reviewer_relation: 'Compañero Voluntario',
-        message: 'Gran compañero de equipo en la feria de salud. Trabajamos juntos en el registro de asistentes de manera súper fluida.',
-        created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-      },
-    ];
-    this.data.public_reviews = sampleReviews;
-    this.recalculateVolunteerRating('prof_vol_001');
-    this.save();
-  }
-
   private getDefaultData(): DatabaseSchema {
     const adminPasswordHash = bcrypt.hashSync('Admin123!', 10);
     const staffPasswordHash = bcrypt.hashSync('Staff123!', 10);
@@ -699,6 +688,7 @@ class Database {
       contact_messages: [],
       resources: [],
       public_reviews: [],
+      review_reports: [],
       volunteer_counter: 2,
     };
   }
@@ -1700,7 +1690,7 @@ class Database {
   public addPublicReview(data: {
     volunteer_id: string;
     rating: number;
-    reviewer_name: string;
+    reviewer_name?: string;
     reviewer_relation?: string;
     message?: string;
   }): PublicReview {
@@ -1709,14 +1699,15 @@ class Database {
       throw new Error('Perfil de voluntario no encontrado.');
     }
 
-    const clampedRating = Math.max(1, Math.min(5, Math.round(data.rating)));
+    const clampedRating = Math.max(1, Math.min(5, Math.round(data.rating || 5)));
     const newRev: PublicReview = {
       id: `rev_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
       volunteer_id: data.volunteer_id,
       rating: clampedRating,
       reviewer_name: data.reviewer_name?.trim() || 'Miembro de la Comunidad',
-      reviewer_relation: data.reviewer_relation?.trim() || 'Padre de Familia',
+      reviewer_relation: data.reviewer_relation?.trim() || 'Comunidad Escolar',
       message: data.message?.trim() || undefined,
+      is_reported: false,
       created_at: new Date().toISOString(),
     };
 
@@ -1728,11 +1719,136 @@ class Database {
     this.notifyUser(
       profile.user_id,
       '¡Nueva Reseña y Calificación de la Comunidad!',
-      `${newRev.reviewer_name} (${newRev.reviewer_relation}) te ha calificado con ${'★'.repeat(clampedRating)} (${clampedRating}/5 estrellas)${newRev.message ? `: "${newRev.message.slice(0, 60)}..."` : '.'}`,
+      `${newRev.reviewer_name} te ha dejado una calificación de ${'★'.repeat(clampedRating)} (${clampedRating}/5 estrellas)${newRev.message ? `: "${newRev.message.slice(0, 60)}..."` : '.'}`,
       'success'
     );
 
     return newRev;
+  }
+
+  public reportPublicReview(reviewId: string, data: {
+    reason: string;
+    reporter_name?: string;
+    details?: string;
+  }): ReviewReport {
+    const review = this.data.public_reviews.find((r) => r.id === reviewId);
+    if (!review) {
+      throw new Error('Reseña no encontrada.');
+    }
+
+    const profile = this.getProfileById(review.volunteer_id);
+    const volunteerName = profile ? `${profile.first_name} ${profile.last_name}` : 'Voluntario';
+
+    review.is_reported = true;
+
+    const newReport: ReviewReport = {
+      id: `rep_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      review_id: review.id,
+      volunteer_id: review.volunteer_id,
+      volunteer_name: volunteerName,
+      reporter_name: data.reporter_name?.trim() || 'Voluntario / Usuario Anónimo',
+      reason: data.reason?.trim() || 'Contenido Inapropiado o Fuera de Lugar',
+      details: data.details?.trim() || undefined,
+      status: 'PENDING',
+      review_snapshot: { ...review },
+      created_at: new Date().toISOString(),
+    };
+
+    this.data.review_reports.unshift(newReport);
+    this.save();
+
+    // Notify all staff/admin
+    const staffUsers = this.data.users.filter((u) => u.role === 'STAFF' || u.role === 'ADMIN');
+    for (const staff of staffUsers) {
+      this.notifyUser(
+        staff.id,
+        '⚠️ Denuncia de Reseña Inapropiada',
+        `Se ha reportado una reseña de ${volunteerName} por motivo: "${newReport.reason}". Revisa el panel de moderación para eliminarla si procede.`,
+        'warning'
+      );
+    }
+
+    return newReport;
+  }
+
+  public getReviewReports(): ReviewReport[] {
+    return this.data.review_reports.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+
+  public deleteReviewByStaff(reviewId: string, staffName: string, reason?: string): { success: boolean; volunteer_id: string } {
+    const reviewIndex = this.data.public_reviews.findIndex((r) => r.id === reviewId);
+    if (reviewIndex === -1) {
+      throw new Error('La reseña no existe o ya fue eliminada.');
+    }
+
+    const review = this.data.public_reviews[reviewIndex];
+    const volunteerId = review.volunteer_id;
+    const profile = this.getProfileById(volunteerId);
+
+    // Remove review
+    this.data.public_reviews.splice(reviewIndex, 1);
+
+    // Recalculate ratings
+    this.recalculateVolunteerRating(volunteerId);
+
+    // Update any related reports
+    this.data.review_reports.forEach((rep) => {
+      if (rep.review_id === reviewId) {
+        rep.status = 'RESOLVED_DELETED';
+        rep.resolved_at = new Date().toISOString();
+        rep.resolved_by = staffName;
+        rep.staff_resolution_note = reason || 'Reseña eliminada por moderación de staff.';
+      }
+    });
+
+    // Create Audit Log
+    this.createAuditLog({
+      user_id: profile ? profile.user_id : 'SYSTEM',
+      user_name: staffName,
+      actor_name: staffName,
+      actor_role: 'STAFF',
+      role: 'STAFF',
+      action: 'MODERATION_REVIEW_DELETED',
+      target_id: reviewId,
+      target_type: 'PUBLIC_REVIEW',
+      details: {
+        volunteer_id: volunteerId,
+        volunteer_name: profile ? `${profile.first_name} ${profile.last_name}` : 'Voluntario',
+        removed_review: review,
+        moderation_reason: reason || 'Contenido inapropiado / fuera de lugar',
+      },
+      reason: reason || 'Moderación de reseña inapropiada',
+    });
+
+    // Notify volunteer
+    if (profile) {
+      this.notifyUser(
+        profile.user_id,
+        'Aviso de Moderación: Reseña Eliminada',
+        `El equipo de Staff ha retirado una reseña señalada como fuera de lugar. Tu promedio de calificación y reconocimientos han sido actualizados con total transparencia.`,
+        'info'
+      );
+    }
+
+    this.save();
+    return { success: true, volunteer_id: volunteerId };
+  }
+
+  public dismissReviewReport(reportId: string, staffName: string, note?: string): ReviewReport {
+    const report = this.data.review_reports.find((r) => r.id === reportId);
+    if (!report) {
+      throw new Error('Reporte no encontrado.');
+    }
+
+    report.status = 'RESOLVED_DISMISSED';
+    report.resolved_at = new Date().toISOString();
+    report.resolved_by = staffName;
+    report.staff_resolution_note = note || 'Reporte desestimado: la reseña cumple con las normas.';
+
+    this.save();
+    return report;
   }
 
   public recalculateVolunteerRating(volunteerId: string): { avg: number; count: number } {
@@ -1759,8 +1875,103 @@ class Database {
     return { avg, count };
   }
 
+  // Calculate podium medals based on rank, stacking, and 1-month persistence
+  public calculatePodiumMedalsForVolunteer(rank: number, profile: VolunteerProfile): any[] {
+    const medals: any[] = [];
+    const joinDate = new Date(profile.join_date || profile.created_at || Date.now());
+    const daysSinceJoin = Math.max(1, Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    // Check if stayed in podium for at least 30 days (1 month)
+    // If profile join date / active podium presence >= 30 days, medal becomes permanent
+    const isPermanentEligible = daysSinceJoin >= 30;
+
+    const goldMedal = {
+      place: 1,
+      tier: 'GOLD',
+      name: 'Corona de Oro #1',
+      title: 'Campeón Distrital de Honor',
+      subtitle: 'Primer Lugar del Podio',
+      icon: 'Crown',
+      color_gradient: 'from-amber-400 via-yellow-300 to-amber-500',
+      badge_bg: 'bg-amber-500/20',
+      border_color: 'border-amber-400/60',
+      text_color: 'text-amber-300',
+      glow_color: 'shadow-[0_0_20px_rgba(245,158,11,0.4)]',
+      is_active: rank === 1,
+      is_permanent: isPermanentEligible && rank === 1,
+      days_on_podium: daysSinceJoin,
+      description: 'Insignia suprema por liderar el cuadro de honor comunitario con el mayor número de horas de servicio.',
+    };
+
+    const silverMedal = {
+      place: 2,
+      tier: 'SILVER',
+      name: 'Escudo de Plata #2',
+      title: 'Subcampeón Distrital de Honor',
+      subtitle: 'Segundo Lugar del Podio',
+      icon: 'Shield',
+      color_gradient: 'from-slate-200 via-slate-300 to-slate-400',
+      badge_bg: 'bg-slate-400/20',
+      border_color: 'border-slate-300/60',
+      text_color: 'text-slate-200',
+      glow_color: 'shadow-[0_0_20px_rgba(203,213,225,0.35)]',
+      is_active: rank === 1 || rank === 2,
+      is_permanent: isPermanentEligible && (rank === 1 || rank === 2),
+      days_on_podium: daysSinceJoin,
+      description: 'Distintivo plateado de excelencia por estar en el selecto grupo de los mejores 2 voluntarios del distrito.',
+    };
+
+    const bronzeMedal = {
+      place: 3,
+      tier: 'BRONZE',
+      name: 'Medalla de Bronce #3',
+      title: 'Tercer Lugar de Honor',
+      subtitle: 'Tercer Puesto del Podio',
+      icon: 'Medal',
+      color_gradient: 'from-amber-700 via-orange-600 to-amber-800',
+      badge_bg: 'bg-amber-800/20',
+      border_color: 'border-amber-600/60',
+      text_color: 'text-amber-400',
+      glow_color: 'shadow-[0_0_20px_rgba(217,119,6,0.35)]',
+      is_active: rank === 1 || rank === 2 || rank === 3,
+      is_permanent: isPermanentEligible && (rank === 1 || rank === 2 || rank === 3),
+      days_on_podium: daysSinceJoin,
+      description: 'Condecoración de bronce por alcanzar el podio de honor de la comunidad educativa.',
+    };
+
+    // Stacking and persistence rules:
+    // Rank 1 gets Gold, Silver, and Bronze
+    if (rank === 1) {
+      medals.push(goldMedal);
+      medals.push(silverMedal);
+      medals.push(bronzeMedal);
+    } else if (rank === 2) {
+      // Rank 2 gets Silver and Bronze
+      medals.push(silverMedal);
+      medals.push(bronzeMedal);
+    } else if (rank === 3) {
+      // Rank 3 gets Bronze
+      medals.push(bronzeMedal);
+    } else {
+      // If rank > 3, only keep permanent medals if earned
+      if (isPermanentEligible && profile.podium_permanent_medals) {
+        if (profile.podium_permanent_medals.includes('GOLD')) {
+          medals.push({ ...goldMedal, is_active: false, is_permanent: true });
+        }
+        if (profile.podium_permanent_medals.includes('SILVER')) {
+          medals.push({ ...silverMedal, is_active: false, is_permanent: true });
+        }
+        if (profile.podium_permanent_medals.includes('BRONZE')) {
+          medals.push({ ...bronzeMedal, is_active: false, is_permanent: true });
+        }
+      }
+    }
+
+    return medals;
+  }
+
   public getPublicVolunteersList(): any[] {
-    return this.data.profiles.map((p) => {
+    const list = this.data.profiles.map((p) => {
       const approvedMin = this.getApprovedMinutesForVolunteer(p.id);
       const approvedHours = parseFloat((approvedMin / 60).toFixed(1));
       const subs = this.getSubmissionsByVolunteer(p.id);
@@ -1791,6 +2002,7 @@ class Database {
         rating_avg: ratingAvg,
         rating_count: ratingCount,
         join_date: p.join_date,
+        raw_profile: p,
       };
     }).sort((a, b) => {
       // Sort by approved hours descending, then rating count
@@ -1799,46 +2011,42 @@ class Database {
       }
       return b.rating_count - a.rating_count;
     });
+
+    // Assign dynamic ranks and podium metadata
+    return list.map((item, index) => {
+      const rank = index + 1;
+      const podiumPlace = rank <= 3 ? (rank as 1 | 2 | 3) : null;
+      const podiumMedals = this.calculatePodiumMedalsForVolunteer(rank, item.raw_profile);
+
+      return {
+        ...item,
+        rank,
+        podium_place: podiumPlace,
+        podium_medals: podiumMedals,
+      };
+    });
   }
 
   public getPublicVolunteerDetail(identifier: string): any | null {
-    // identifier can be profile ID or volunteer_id (e.g. VOL-00001)
-    const profile = this.data.profiles.find(
+    const list = this.getPublicVolunteersList();
+    const found = list.find(
       (p) => p.id === identifier || p.volunteer_id.toLowerCase() === identifier.toLowerCase()
     );
 
+    if (!found) return null;
+
+    const profile = this.getProfileById(found.id);
     if (!profile) return null;
 
-    const approvedMin = this.getApprovedMinutesForVolunteer(profile.id);
-    const approvedHours = parseFloat((approvedMin / 60).toFixed(1));
     const subs = this.getSubmissionsByVolunteer(profile.id).filter((s) => s.status === 'APPROVED');
     const certs = this.getCertificatesByVolunteer(profile.id);
     const reviews = this.getPublicReviewsForVolunteer(profile.id);
-    
-    const ratingCount = reviews.length;
-    const ratingAvg = ratingCount > 0
-      ? parseFloat((reviews.reduce((acc, r) => acc + r.rating, 0) / ratingCount).toFixed(1))
-      : 5.0;
 
     return {
-      id: profile.id,
-      volunteer_id: profile.volunteer_id,
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      full_name: `${profile.first_name} ${profile.last_name}`.trim(),
-      school: profile.school,
-      grade: profile.grade,
-      organization: profile.organization,
-      languages: profile.languages || [],
-      bio: profile.bio,
-      approved_minutes: approvedMin,
-      approved_hours: approvedHours,
+      ...found,
       total_approved_submissions: subs.length,
       certificates: certs,
       reviews,
-      rating_avg: ratingAvg,
-      rating_count: ratingCount,
-      join_date: profile.join_date,
     };
   }
 
